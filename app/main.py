@@ -175,14 +175,26 @@ def login(
     db: Session = Depends(get_db),
 ):
     user = db.query(User).filter(User.email == email.strip().lower()).first()
-    if not user or not verify_password(password, user.password_hash):
+    if not user:
         return templates.TemplateResponse(
             "auth.html",
             {
                 "request": request,
                 "mode": "login",
                 "title": "Sign in",
-                "error": "Invalid email or password.",
+                "error": "No account found with that email. Click Create account below.",
+                "email": email,
+            },
+            status_code=400,
+        )
+    if not verify_password(password, user.password_hash):
+        return templates.TemplateResponse(
+            "auth.html",
+            {
+                "request": request,
+                "mode": "login",
+                "title": "Sign in",
+                "error": "Incorrect password. Try again or create a new account.",
                 "email": email,
             },
             status_code=400,
