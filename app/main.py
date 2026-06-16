@@ -34,7 +34,8 @@ from app.deal_helpers import (
     get_revenue_stats,
     parse_amount,
 )
-from app.database import Base, engine, get_db
+from app.database import Base, SessionLocal, engine, get_db
+from app.host import ensure_host, should_be_host_on_register
 from app.migrations import run_migrations
 from app.models import Contact, ContactStatus, DailyActivity, Deal, DealStatus, User
 
@@ -44,6 +45,8 @@ templates = Jinja2Templates(directory="app/templates")
 
 Base.metadata.create_all(bind=engine)
 run_migrations()
+with SessionLocal() as db:
+    ensure_host(db)
 
 STATUS_LABELS = {
     ContactStatus.lead: "Lead",
@@ -132,7 +135,7 @@ def register(
             status_code=400,
         )
 
-    is_host = db.query(User).count() == 0
+    is_host = should_be_host_on_register(db, email)
     user = User(
         name=name.strip(),
         email=email,
@@ -184,6 +187,8 @@ def login(
             },
             status_code=400,
         )
+
+    ensure_host(db, user)
 
     token = create_session(user.id)
     response = RedirectResponse("/dashboard", status_code=303)
