@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Activity — Team CRM{% endblock %}
+{% block content %}
+<div class="mb-6 lg:mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+  <div class="min-w-0">
+    <h1 class="text-2xl lg:text-3xl xl:text-4xl font-bold text-slate-900">Daily activity</h1>
+    <p class="text-base lg:text-lg text-slate-500 mt-1 lg:mt-2">Log what you accomplished today</p>
+  </div>
+  <a href="/dashboard" class="text-sm lg:text-base text-brand-600 hover:underline shrink-0">← Back to team home</a>
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-6 w-full">
+  <div class="card p-6 lg:p-8 w-full min-w-0">
+    <h2 class="text-xl lg:text-2xl font-semibold mb-6">
+      {% if selected_date == today %}Today's log{% else %}Log for {{ selected_date.strftime('%B %d, %Y') }}{% endif %}
+    </h2>
+
+    {% if error %}
+    <div class="mb-6 p-4 rounded-xl bg-red-50 text-red-700 text-base">{{ error }}</div>
+    {% endif %}
+
+    {% set f = form if form is defined else record %}
+
+    <form method="post" action="/activity" class="space-y-6 w-full">
+      <input type="hidden" name="activity_date" value="{{ selected_date.isoformat() }}">
+
+      <div class="w-full max-w-xs">
+        <label class="block text-sm font-medium text-slate-700 mb-2">Date</label>
+        <input type="date" value="{{ selected_date.isoformat() }}" max="{{ today.isoformat }}"
+          onchange="window.location='/activity?day='+this.value"
+          class="input-field">
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+        <div class="metric-card">
+          <label for="linkedin_contacts">LinkedIn contacts</label>
+          <span class="metric-hint">People reached on LinkedIn</span>
+          <input type="number" id="linkedin_contacts" name="linkedin_contacts" min="0"
+            value="{{ f.linkedin_contacts if f else 0 }}" class="metric-input">
+        </div>
+        <div class="metric-card">
+          <label for="meetings_set">Meetings set</label>
+          <span class="metric-hint">New meetings booked</span>
+          <input type="number" id="meetings_set" name="meetings_set" min="0"
+            value="{{ f.meetings_set if f else 0 }}" class="metric-input">
+        </div>
+        <div class="metric-card">
+          <label for="sales_closed">Sales closed</label>
+          <span class="metric-hint">Deals closed today</span>
+          <input type="number" id="sales_closed" name="sales_closed" min="0"
+            value="{{ f.sales_closed if f else 0 }}" class="metric-input">
+        </div>
+      </div>
+
+      <div class="w-full">
+        <label class="block text-sm font-medium text-slate-700 mb-2">Notes (optional)</label>
+        <textarea name="notes" rows="3" placeholder="Anything else worth noting about today..."
+          class="input-field resize-y">{{ f.notes if f and f.notes else '' }}</textarea>
+      </div>
+
+      <button type="submit" class="px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white text-base font-medium rounded-xl">
+        Save activity
+      </button>
+    </form>
+  </div>
+
+  <div class="card p-6 lg:p-8 w-full min-w-0">
+    <h2 class="text-xl lg:text-2xl font-semibold mb-6">Recent days</h2>
+    {% if history %}
+    <div class="space-y-3">
+      {% for day in history %}
+      <a href="/activity?day={{ day.activity_date.isoformat() }}"
+        class="flex items-center justify-between gap-4 p-4 rounded-xl border {% if day.activity_date == selected_date %}border-brand-300 bg-brand-50{% else %}border-slate-200 hover:bg-slate-50{% endif %} transition-colors">
+        <div class="min-w-0">
+          <p class="text-base font-medium text-slate-900">
+            {% if day.activity_date == today %}Today{% else %}{{ day.activity_date.strftime('%a, %b %d') }}{% endif %}
+          </p>
+          <p class="text-sm text-slate-500 mt-0.5 truncate">{{ day.linkedin_contacts }} LI · {{ day.meetings_set }} mtgs · {{ day.sales_closed }} sales</p>
+        </div>
+        <span class="text-lg font-bold text-brand-600 shrink-0">{{ day.activity_score }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+      <p class="text-base lg:text-lg text-slate-500">No activity logged yet. Fill in today's numbers to get started.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

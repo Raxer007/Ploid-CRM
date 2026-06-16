@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Team contacts — Team CRM{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+  <div>
+    <h1 class="text-2xl lg:text-3xl font-bold text-slate-900">Team contacts</h1>
+    <p class="text-sm text-slate-500 mt-1">Host view — all contacts across the team (private to you)</p>
+  </div>
+  <a href="/contacts" class="text-sm text-brand-600 hover:underline shrink-0">← My contacts</a>
+</div>
+
+<div class="card p-4 mb-6">
+  <form method="get" action="/admin/contacts" class="flex flex-col sm:flex-row gap-3">
+    <div class="flex-1 relative min-w-0">
+      <input type="search" name="q" value="{{ search }}" placeholder="Search contacts or team member..."
+        class="input-field">
+    </div>
+    <select name="owner" class="input-field sm:w-48 shrink-0">
+      <option value="">All team members</option>
+      {% for member in team_members %}
+      <option value="{{ member.id }}" {% if filter_owner == member.id %}selected{% endif %}>{{ member.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-medium shrink-0">Filter</button>
+  </form>
+</div>
+
+{% if contacts %}
+<div class="card overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 border-b border-slate-200">
+        <tr>
+          <th class="text-left px-5 py-3 font-medium text-slate-600">Name</th>
+          <th class="text-left px-5 py-3 font-medium text-slate-600">Owner</th>
+          <th class="text-left px-5 py-3 font-medium text-slate-600 hidden md:table-cell">Company</th>
+          <th class="text-left px-5 py-3 font-medium text-slate-600">Status</th>
+          <th class="text-right px-5 py-3 font-medium text-slate-600">View</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for contact in contacts %}
+        <tr class="hover:bg-slate-50">
+          <td class="px-5 py-3">
+            <p class="font-medium text-slate-900">{{ contact.full_name }}</p>
+            {% if contact.email %}<p class="text-xs text-slate-500">{{ contact.email }}</p>{% endif %}
+          </td>
+          <td class="px-5 py-3 text-slate-600">{{ owners[contact.user_id] }}</td>
+          <td class="px-5 py-3 text-slate-600 hidden md:table-cell">{{ contact.company or '—' }}</td>
+          <td class="px-5 py-3">
+            <span class="text-xs px-2.5 py-1 rounded-full {{ status_colors[contact.status] }}">{{ status_labels[contact.status] }}</span>
+          </td>
+          <td class="px-5 py-3 text-right">
+            <a href="/contacts/{{ contact.id }}" class="text-brand-600 hover:underline">View</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card text-center py-16 px-4">
+  <p class="text-slate-500">No contacts found.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Deals — Team CRM{% endblock %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="mb-6 lg:mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+  <div class="min-w-0">
+    <h1 class="text-2xl lg:text-3xl font-bold text-slate-900">Deals</h1>
+    <p class="text-base text-slate-500 mt-1">Company-wide revenue — visible to the whole team</p>
+  </div>
+  <a href="/deals/new" class="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-medium hover:bg-brand-700 shrink-0">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+    Add deal
+  </a>
+</div>
+
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="card p-5">
+    <p class="text-sm font-medium text-slate-500">Total revenue</p>
+    <p class="text-2xl lg:text-3xl font-bold text-emerald-600 mt-1">{{ format_money(stats.total_revenue) }}</p>
+  </div>
+  <div class="card p-5">
+    <p class="text-sm font-medium text-slate-500">This month</p>
+    <p class="text-2xl lg:text-3xl font-bold text-brand-600 mt-1">{{ format_money(stats.month_revenue) }}</p>
+  </div>
+  <div class="card p-5">
+    <p class="text-sm font-medium text-slate-500">Pending pipeline</p>
+    <p class="text-2xl lg:text-3xl font-bold text-amber-600 mt-1">{{ format_money(stats.pending_value) }}</p>
+  </div>
+  <div class="card p-5">
+    <p class="text-sm font-medium text-slate-500">Deals closed</p>
+    <p class="text-2xl lg:text-3xl font-bold text-slate-900 mt-1">{{ stats.won_count }}</p>
+  </div>
+</div>
+
+<div class="card p-6 mb-6">
+  <h2 class="text-lg font-semibold mb-1">Revenue over time</h2>
+  <p class="text-sm text-slate-500 mb-4">Won deals — last 90 days</p>
+  <div class="chart-wrap">
+    <canvas id="revenueChart"></canvas>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <div class="card p-6 lg:col-span-1">
+    <h2 class="text-lg font-semibold mb-4">Revenue by person</h2>
+    {% if by_person %}
+    <div class="space-y-3">
+      {% for person in by_person %}
+      <div class="flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <p class="font-medium text-slate-900 truncate">{{ person.name }}</p>
+          <p class="text-sm text-slate-500">{{ person.deal_count }} deal{% if person.deal_count != 1 %}s{% endif %}</p>
+        </div>
+        <span class="font-bold text-emerald-600 shrink-0">{{ format_money(person.revenue) }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-slate-500 text-sm">No deals yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="card overflow-hidden lg:col-span-2">
+    <div class="p-6 border-b border-slate-100">
+      <h2 class="text-lg font-semibold">All deals</h2>
+    </div>
+    {% if deals %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+          <tr>
+            <th class="text-left px-5 py-3 font-medium text-slate-600">Deal</th>
+            <th class="text-left px-5 py-3 font-medium text-slate-600 hidden sm:table-cell">Owner</th>
+            <th class="text-right px-5 py-3 font-medium text-slate-600">Amount</th>
+            <th class="text-center px-5 py-3 font-medium text-slate-600">Status</th>
+            <th class="text-right px-5 py-3 font-medium text-slate-600 w-20"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for deal in deals %}
+          <tr class="hover:bg-slate-50">
+            <td class="px-5 py-3">
+              <p class="font-medium text-slate-900">{{ deal.title }}</p>
+              <p class="text-xs text-slate-500">{{ deal.closed_date.strftime('%b %d, %Y') }}{% if deal.company %} · {{ deal.company }}{% endif %}</p>
+            </td>
+            <td class="px-5 py-3 text-slate-600 hidden sm:table-cell">{{ owners[deal.user_id] }}</td>
+            <td class="px-5 py-3 text-right font-semibold {% if deal.status.value == 'won' %}text-emerald-600{% else %}text-slate-600{% endif %}">
+              {{ format_money(deal.amount) }}
+            </td>
+            <td class="px-5 py-3 text-center">
+              <span class="text-xs px-2.5 py-1 rounded-full {{ deal_status_colors[deal.status] }}">{{ deal_status_labels[deal.status] }}</span>
+            </td>
+            <td class="px-5 py-3 text-right">
+              {% if deal.user_id == user.id %}
+              <a href="/deals/{{ deal.id }}/edit" class="text-brand-600 hover:underline text-sm">Edit</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-12 px-4">
+      <p class="text-slate-500 mb-4">No deals logged yet. Add the first one to start tracking revenue.</p>
+      <a href="/deals/new" class="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-medium hover:bg-brand-700">Add deal</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  const chartData = {{ chart_json | safe }};
+  new Chart(document.getElementById('revenueChart'), {
+    type: 'bar',
+    data: {
+      labels: chartData.labels,
+      datasets: [{
+        label: 'Revenue',
+        data: chartData.amounts,
+        backgroundColor: 'rgba(16,185,129,0.7)',
+        borderColor: '#10b981',
+        borderWidth: 1,
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ' $' + ctx.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2}),
+          },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { callback: (v) => '$' + v.toLocaleString() },
+        },
+      },
+    },
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Team CRM{% endblock %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="mb-6 lg:mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+  <div class="min-w-0">
+    <h1 class="text-2xl lg:text-3xl xl:text-4xl font-bold text-slate-900">Team home</h1>
+    <p class="text-base lg:text-lg text-slate-500 mt-1 lg:mt-2">Welcome back, {{ user.name.split()[0] }} — track team progress and your daily work</p>
+  </div>
+  <a href="/activity" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 lg:px-6 lg:py-3 bg-brand-600 text-white rounded-xl text-sm lg:text-base font-medium hover:bg-brand-700 shrink-0">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+    Log today's activity
+  </a>
+</div>
+
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8 w-full">
+  <div class="card p-4 lg:p-6 min-w-0">
+    <p class="text-sm lg:text-base font-medium text-slate-500 truncate">LinkedIn today</p>
+    <p class="text-3xl lg:text-4xl xl:text-5xl font-bold text-blue-600 mt-1 lg:mt-2">{{ today_activity.linkedin_contacts if today_activity else 0 }}</p>
+  </div>
+  <div class="card p-4 lg:p-6 min-w-0">
+    <p class="text-sm lg:text-base font-medium text-slate-500 truncate">Meetings today</p>
+    <p class="text-3xl lg:text-4xl xl:text-5xl font-bold text-amber-600 mt-1 lg:mt-2">{{ today_activity.meetings_set if today_activity else 0 }}</p>
+  </div>
+  <div class="card p-4 lg:p-6 min-w-0">
+    <p class="text-sm lg:text-base font-medium text-slate-500 truncate">Sales closed today</p>
+    <p class="text-3xl lg:text-4xl xl:text-5xl font-bold text-emerald-600 mt-1 lg:mt-2">{{ today_activity.sales_closed if today_activity else 0 }}</p>
+  </div>
+  <div class="card p-4 lg:p-6 min-w-0">
+    <p class="text-sm lg:text-base font-medium text-slate-500 truncate">Your week score</p>
+    <p class="text-3xl lg:text-4xl xl:text-5xl font-bold text-brand-600 mt-1 lg:mt-2">{{ week_totals.score }}</p>
+    <p class="text-xs lg:text-sm text-slate-400 mt-1 truncate">{{ week_totals.linkedin }} LI · {{ week_totals.meetings }} mtgs · {{ week_totals.sales }} sales</p>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 lg:mb-8 w-full">
+  <div class="card p-6 lg:p-8 min-w-0">
+    <h2 class="text-xl lg:text-2xl font-semibold mb-1">Team progress</h2>
+    <p class="text-sm lg:text-base text-slate-500 mb-4 lg:mb-6">Combined activity over the last 14 days</p>
+    <div class="chart-wrap">
+      <canvas id="teamChart"></canvas>
+    </div>
+  </div>
+  <div class="card p-6 lg:p-8 min-w-0">
+    <h2 class="text-xl lg:text-2xl font-semibold mb-1">Your progress</h2>
+    <p class="text-sm lg:text-base text-slate-500 mb-4 lg:mb-6">Daily score: LinkedIn + 2× meetings + 5× sales</p>
+    <div class="chart-wrap">
+      <canvas id="userChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="card p-6 lg:p-8 w-full min-w-0">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+    <div class="min-w-0">
+      <h2 class="text-xl lg:text-2xl font-semibold">Leaderboard</h2>
+      <p class="text-sm lg:text-base text-slate-500 mt-1">This week's rankings</p>
+    </div>
+    <a href="/activity" class="text-sm lg:text-base text-brand-600 hover:underline shrink-0">Log activity →</a>
+  </div>
+
+  {% if leaderboard %}
+  <div class="overflow-x-auto -mx-2 px-2">
+    <table class="w-full text-sm lg:text-base min-w-[640px] leaderboard-table">
+      <thead class="bg-slate-50 border-b border-slate-200">
+        <tr>
+          <th class="text-left px-4 lg:px-6 py-3 lg:py-4 font-medium text-slate-600 w-14">#</th>
+          <th class="text-left px-4 lg:px-6 py-3 lg:py-4 font-medium text-slate-600">Team member</th>
+          <th class="text-center px-4 lg:px-6 py-3 lg:py-4 font-medium text-slate-600 w-24">LinkedIn</th>
+          <th class="text-center px-4 lg:px-6 py-3 lg:py-4 font-medium text-slate-600 w-24">Meetings</th>
+          <th class="text-center px-4 lg:px-6 py-3 lg:py-4 font-medium text-slate-600 w-20">Sales</th>
+          <th class="text-right px-4 lg:px-6 py-3 lg:py-4 font-medium text-slate-600 w-20">Score</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for entry in leaderboard %}
+        <tr class="{% if entry.is_current_user %}bg-brand-50/60{% else %}hover:bg-slate-50{% endif %}">
+          <td class="px-4 lg:px-6 py-3 lg:py-4">
+            {% if entry.rank == 1 %}🥇
+            {% elif entry.rank == 2 %}🥈
+            {% elif entry.rank == 3 %}🥉
+            {% else %}<span class="font-semibold text-slate-400">{{ entry.rank }}</span>{% endif %}
+          </td>
+          <td class="px-4 lg:px-6 py-3 lg:py-4">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-semibold text-xs lg:text-sm shrink-0">
+                {{ entry.name.split()[0][0] }}{% if entry.name.split()|length > 1 %}{{ entry.name.split()[-1][0] }}{% endif %}
+              </div>
+              <span class="font-medium text-slate-900 truncate">
+                {{ entry.name }}
+                {% if entry.is_current_user %}<span class="text-brand-600 font-normal">(you)</span>{% endif %}
+              </span>
+            </div>
+          </td>
+          <td class="px-4 lg:px-6 py-3 lg:py-4 text-center text-slate-700">{{ entry.linkedin }}</td>
+          <td class="px-4 lg:px-6 py-3 lg:py-4 text-center text-slate-700">{{ entry.meetings }}</td>
+          <td class="px-4 lg:px-6 py-3 lg:py-4 text-center font-semibold text-emerald-600">{{ entry.sales }}</td>
+          <td class="px-4 lg:px-6 py-3 lg:py-4 text-right font-bold text-brand-600">{{ entry.score }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-base lg:text-lg text-slate-500 text-center py-12">No team members yet. Invite your team to sign up and start logging activity.</p>
+  {% endif %}
+</div>
+
+<script>
+  const teamData = {{ team_chart_json | safe }};
+  const userData = {{ user_chart_json | safe }};
+
+  new Chart(document.getElementById('teamChart'), {
+    type: 'line',
+    data: {
+      labels: teamData.labels,
+      datasets: [
+        { label: 'LinkedIn', data: teamData.linkedin, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', tension: 0.3, fill: true },
+        { label: 'Meetings', data: teamData.meetings, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', tension: 0.3, fill: true },
+        { label: 'Sales', data: teamData.sales, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', tension: 0.3, fill: true },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12, boxWidth: 12 } } },
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } } },
+        x: { ticks: { font: { size: 11 }, maxRotation: 45, minRotation: 0 } },
+      },
+    },
+  });
+
+  new Chart(document.getElementById('userChart'), {
+    type: 'bar',
+    data: {
+      labels: userData.labels,
+      datasets: [{
+        label: 'Your score',
+        data: userData.scores,
+        backgroundColor: 'rgba(99,102,241,0.7)',
+        borderColor: '#6366f1',
+        borderWidth: 1,
+        borderRadius: 6,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } } },
+        x: { ticks: { font: { size: 11 }, maxRotation: 45, minRotation: 0 } },
+      },
+    },
+  });
+</script>
+{% endblock %}
