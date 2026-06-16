@@ -1,12 +1,16 @@
+import logging
+import traceback
 from datetime import date, datetime, timedelta
 from typing import Optional
 
 from fastapi import Depends, FastAPI, Form, Query, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger("uvicorn.error")
 
 from app.access import can_edit_contact, get_contact_for_user
 from app.activity_helpers import (
@@ -42,6 +46,13 @@ from app.models import Contact, ContactStatus, DailyActivity, Deal, DealStatus, 
 app = FastAPI(title="Team CRM")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
+
+
+@app.exception_handler(Exception)
+def log_unhandled_exception(request: Request, exc: Exception):
+    logger.error("Unhandled error on %s %s", request.method, request.url.path)
+    logger.error(traceback.format_exc())
+    return PlainTextResponse("Internal Server Error", status_code=500)
 
 Base.metadata.create_all(bind=engine)
 run_migrations()
@@ -135,16 +146,33 @@ def register(
             status_code=400,
         )
 
-    is_host = should_be_host_on_register(db, email)
-    user = User(
-        name=name.strip(),
-        email=email,
-        password_hash=hash_password(password),
-        is_host=is_host,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    try:
+        is_host = should_be_host_on_register(db, email)
+        user = User(
+            name=name.strip(),
+            email=email,
+            password_hash=hash_password(password),
+            is_host=is_host,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    except Exception:
+        db.rollback()
+        logger.error("Registration failed for %s", email)
+        logger.error(traceback.format_exc())
+        return templates.TemplateResponse(
+            "auth.html",
+            {
+                "request": request,
+                "mode": "register",
+                "title": "Create account",
+                "error": "Something went wrong creating your account. Please try again.",
+                "name": name,
+                "email": email,
+            },
+            status_code=400,
+        )
 
     token = create_session(user.id)
     response = RedirectResponse("/dashboard", status_code=303)

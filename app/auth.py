@@ -1,4 +1,4 @@
-from datetime import datetime
+import secrets
 from typing import Optional, Union
 
 from fastapi import Depends, HTTPException, Request
@@ -26,8 +26,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_session(user_id: int) -> str:
-    token = pwd_context.hash(f"{user_id}-{datetime.utcnow().isoformat()}")
-    token = token.replace("/", "_").replace(".", "-")[:64]
+    token = secrets.token_urlsafe(32)
     _sessions[token] = user_id
     return token
 
