@@ -1,6 +1,5 @@
 import enum
 from datetime import date, datetime
-from typing import Optional
 
 from sqlalchemy import Boolean, Date, DateTime, Enum, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -49,14 +48,14 @@ class Contact(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     first_name: Mapped[str] = mapped_column(String(80))
     last_name: Mapped[str] = mapped_column(String(80), default="")
-    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    phone: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
-    company: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
-    job_title: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=True)
+    phone: Mapped[str] = mapped_column(String(40), nullable=True)
+    company: Mapped[str] = mapped_column(String(120), nullable=True)
+    job_title: Mapped[str] = mapped_column(String(120), nullable=True)
     status: Mapped[ContactStatus] = mapped_column(
         Enum(ContactStatus), default=ContactStatus.lead
     )
-    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    notes: Mapped[str] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -81,7 +80,7 @@ class DailyActivity(Base):
     linkedin_contacts: Mapped[int] = mapped_column(Integer, default=0)
     meetings_set: Mapped[int] = mapped_column(Integer, default=0)
     sales_closed: Mapped[int] = mapped_column(Integer, default=0)
-    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    notes: Mapped[str] = mapped_column(Text, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
@@ -100,10 +99,10 @@ class Deal(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     title: Mapped[str] = mapped_column(String(200))
     amount: Mapped[float] = mapped_column(Float, default=0.0)
-    company: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    company: Mapped[str] = mapped_column(String(120), nullable=True)
     status: Mapped[DealStatus] = mapped_column(Enum(DealStatus), default=DealStatus.won)
     closed_date: Mapped[date] = mapped_column(Date, default=date.today)
-    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    notes: Mapped[str] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     owner: Mapped["User"] = relationship("User", back_populates="deals")
