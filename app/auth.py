@@ -1,7 +1,8 @@
-import secrets
+import os
 from typing import Optional, Union
 
 from fastapi import Depends, HTTPException, Request
+from itsdangerous import BadData, URLSafeTimedSerializer
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from starlette.responses import RedirectResponse
@@ -14,7 +15,12 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SESSION_COOKIE = "crm_session"
 SESSION_MAX_AGE = 60 * 60 * 24 * 14  # 14 days
 
-_sessions: dict[str, int] = {}
+# Stateless, signed-cookie sessions so logins survive server restarts and
+# redeploys (an in-memory store gets wiped every time the instance sleeps).
+SECRET_KEY = (
+    os.environ.get("SECRET_KEY", "").strip() or "local-dev-secret-change-me"
+)
+_serializer = URLSafeTimedSerializer(SECRET_KEY, salt="crm-session")
 
 
 def hash_password(password: str) -> str:
@@ -26,20 +32,21 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_session(user_id: int) -> str:
-    token = secrets.token_urlsafe(32)
-    _sessions[token] = user_id
-    return token
+    return _serializer.dumps(user_id)
 
 
 def destroy_session(token: Optional[str]) -> None:
-    if token and token in _sessions:
-        del _sessions[token]
+    # Stateless sessions live only in the cookie; the caller clears it.
+    return None
 
 
 def get_user_id_from_session(token: Optional[str]) -> Optional[int]:
     if not token:
         return None
-    return _sessions.get(token)
+    try:
+        return _serializer.loads(token, max_age=SESSION_MAX_AGE)
+    except BadData:
+        return None
 
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:

@@ -17,6 +17,8 @@
     {% endif %}
 
     {% set f = form if form is defined else deal %}
+    {% set current_close = (f.closed_date if f is mapping else f.closed_date.isoformat()) if (f and f.closed_date) else today.isoformat() %}
+    {% set current_status = (f.status if f is mapping else f.status.value) if (f and f.status) else 'won' %}
 
     <form method="post" action="{% if deal %}/deals/{{ deal.id }}/edit{% else %}/deals/new{% endif %}" class="space-y-5">
       <div>
@@ -37,7 +39,7 @@
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-2">Close date</label>
           <input type="date" name="closed_date"
-            value="{{ f.closed_date.isoformat() if f and f.closed_date else today.isoformat() }}"
+            value="{{ current_close }}"
             class="input-field">
         </div>
       </div>
@@ -54,7 +56,7 @@
           <select name="status" class="input-field">
             {% for s in deal_statuses %}
             <option value="{{ s.value }}"
-              {% if (f.status.value if f and f.status else 'won') == s.value %}selected{% endif %}>
+              {% if current_status == s.value %}selected{% endif %}>
               {{ deal_status_labels[s] }}
             </option>
             {% endfor %}

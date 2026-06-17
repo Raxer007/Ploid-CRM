@@ -12,6 +12,8 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.8"
+      - key: SECRET_KEY
+        generateValue: true
       - key: HOST_EMAIL
         sync: false
       - key: DATABASE_URL

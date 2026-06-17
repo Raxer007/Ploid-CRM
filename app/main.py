@@ -119,6 +119,19 @@ def register(
     db: Session = Depends(get_db),
 ):
     email = email.strip().lower()
+    if not name.strip():
+        return templates.TemplateResponse(
+            "auth.html",
+            {
+                "request": request,
+                "mode": "register",
+                "title": "Create account",
+                "error": "Please enter your name.",
+                "name": name,
+                "email": email,
+            },
+            status_code=400,
+        )
     if db.query(User).filter(User.email == email).first():
         return templates.TemplateResponse(
             "auth.html",
